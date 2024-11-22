@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy import stats
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 ## ATENCIÓN: Debe colocar la dirección en la que ha sido publicada la aplicación en la siguiente línea
 # url = 'https://tp8-555555.streamlit.app/'
 
 def mostrar_informacion_alumno():
-    with st.container(border=True):
+    with st.container():
         st.markdown('**Legajo:** 58.899')
         st.markdown('**Nombre:** Villagra Juan Gabriel')
         st.markdown('**Comisión:** C5')
@@ -101,7 +100,6 @@ def mostrar_metrica(etiqueta, valor, cambio, tipo_formato="numero"):
     </div>
     """, unsafe_allow_html=True)
 
-# Barra lateral
 st.sidebar.title("Cargar archivo de datos")
 st.sidebar.write("Subir archivo CSV")
 archivo_cargado = st.sidebar.file_uploader("Arrastrar y soltar archivo aquí", type=['csv'])
@@ -136,58 +134,30 @@ else:
             st.header(producto)
             precio_promedio, margen_promedio, unidades_vendidas, cambio_precio, cambio_margen, cambio_unidades = calcular_metricas(df_actual, producto, df_anterior)
             
-            # Mostrar métricas
             mostrar_metrica("Precio Promedio", precio_promedio, cambio_precio, "moneda")
             mostrar_metrica("Margen Promedio", margen_promedio, cambio_margen, "porcentaje")
             mostrar_metrica("Unidades Vendidas", unidades_vendidas, cambio_unidades)
 
         with col_grafico:
-            st.write("")
             st.write("")  
-            st.write("")  
-            st.write("")  
-            st.write("")  
-            st.write("")  
-            st.write("")  
-            st.write("")  
-            st.write("")  
-
             serie_temporal = df[df['Producto'] == producto].groupby(['Año', 'Mes'])['Unidades_vendidas'].sum().reset_index()
             serie_temporal['Fecha'] = pd.to_datetime(serie_temporal['Año'].astype(str) + '-' + 
                                                 serie_temporal['Mes'].astype(str).str.zfill(2) + '-01')
             serie_temporal = serie_temporal.sort_values('Fecha')
             
             x = np.arange(len(serie_temporal))
-            pendiente, intercepto, r_valor, p_valor, error_std = stats.linregress(x, serie_temporal['Unidades_vendidas'])
+            pendiente = np.polyfit(x, serie_temporal['Unidades_vendidas'], 1)[0]
+            intercepto = np.polyfit(x, serie_temporal['Unidades_vendidas'], 1)[1]
             linea_tendencia = pendiente * x + intercepto
             
-            fig = go.Figure()
-            
-            fig.add_trace(go.Scatter(
-                x=serie_temporal['Fecha'],
-                y=serie_temporal['Unidades_vendidas'],
-                mode='lines',
-                name=producto,
-                line=dict(color='#1f77b4', width=2)
-            ))
-            
-            fig.add_trace(go.Scatter(
-                x=serie_temporal['Fecha'],
-                y=linea_tendencia,
-                mode='lines',
-                name='Tendencia',
-                line=dict(color='#ff7f0e', width=2, dash='dot')
-            ))
-            
-            fig.update_layout(
-                title="Evolución de Ventas Mensual",
-                xaxis_title="Año-Mes",
-                yaxis_title="Unidades Vendidas",
-                showlegend=True,
-                height=400,
-                margin=dict(l=0, r=0, t=30, b=0)
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.plot(serie_temporal['Fecha'], serie_temporal['Unidades_vendidas'], label="Unidades Vendidas", marker="o")
+            ax.plot(serie_temporal['Fecha'], linea_tendencia, label="Tendencia", linestyle="--")
+            ax.set_title("Evolución de Ventas Mensual")
+            ax.set_xlabel("Año-Mes")
+            ax.set_ylabel("Unidades Vendidas")
+            ax.legend()
+            st.pyplot(fig)
 
-mostrar_informacion_alumno()
+    mostrar_informacion_alumno()
+
